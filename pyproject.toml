@@ -1,0 +1,19 @@
+[project]
+name = "past-life-card-with-stat"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "accelerate>=1.12.0",
+    "controlnet-aux>=0.0.10",
+    "diffusers>=0.36.0",
+    "fastapi>=0.128.0",
+    "numpy>=2.4.1",
+    "opencv-python>=4.13.0.90",
+    "pillow>=12.1.0",
+    "pydantic>=2.12.5",
+    "python-multipart>=0.0.22",
+    "transformers>=5.0.0",
+    "uvicorn>=0.40.0",
+]
