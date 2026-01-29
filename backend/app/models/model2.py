@@ -7,6 +7,8 @@ from diffusers import StableDiffusionXLControlNetPipeline
 from diffusers.models.controlnets.controlnet import ControlNetModel
 from PIL import Image
 
+# 아예 안 쓸 수도 있음
+
 
 class MedievalCharacterTransformer:
     """
@@ -197,7 +199,7 @@ class MedievalCharacterTransformer:
         """
         return (
             f"{style} RPG character portrait, {description}, "
-            "wearing medieval fantasy armor and clothing, "
+            "wearing medieval fantasy armor or clothing, "
             "IMPORTANT: preserve original face, keep facial features, maintain face identity, "
             "detailed character concept art, painterly style, "
             "dramatic cinematic lighting, high quality, masterpiece"

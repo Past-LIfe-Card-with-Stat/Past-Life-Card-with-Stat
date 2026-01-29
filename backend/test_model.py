@@ -9,7 +9,7 @@ def test_transformation():
     transformer = MedievalCharacterTransformer()
 
     # 테스트 이미지
-    input_image = Image.open("test_input.jpg")
+    input_image = Image.open("backend\IMG_6386.jpg")
 
     # 모델1 출력 시뮬레이션 (실제 형식)
     model1_output = {
