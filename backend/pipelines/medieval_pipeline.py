@@ -13,10 +13,7 @@ class MedievalPipeline:
         self.generator = CharacterGenerator()
         self.blender = ImageBlender()
 
-    def run(self, input_path: str, prompt: str) -> Image.Image:
-        # 1. 이미지 로드
-        input_image = Image.open(input_path).convert("RGB")
-
+    def run(self, input_image: Image.Image, prompt: str) -> Image.Image:
         # 2. 원본 얼굴 찾기
         print("Detecting source face...")
         source_face_info = self.detector.detect(input_image)
