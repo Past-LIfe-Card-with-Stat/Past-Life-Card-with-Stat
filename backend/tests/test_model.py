@@ -1,268 +1,374 @@
-# test_model2.py (수정 버전)
-from app.models.model2 import MedievalCharacterTransformer
+"""
+통합 테스트 스크립트: Model 1 → Model 2 전체 파이프라인
+단일 이미지 테스트용
+"""
+
+# # 프로젝트 루트에서 실행
+# python backend/tests/test_model.py test_images/photo1.jpg
+
+import sys
+from pathlib import Path
+
+# 프로젝트 루트를 sys.path에 추가 (import 오류 방지)
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
+
+import json
+from datetime import datetime
+
 from PIL import Image
 
+# Model 2: 중세 이미지 생성
+from backend.app.models.model2 import MedievalCharacterTransformer
 
-def test_transformation():
-    """모델 테스트 - 모델1 JSON 형식 (수정된 버전)"""
+# Model 1: 특징 추출
+from backend.pipelines.extract_features_pipeline import main as extract_features
 
-    # 모델 로드
-    transformer = MedievalCharacterTransformer()
-
-    # 테스트 이미지
-    input_image = Image.open(r"backend\IMG_6386.jpg")  # raw string으로 경로 처리
-
-    # 모델1 출력 시뮬레이션 (실제 형식)
-    model1_output = {
-        "quality": {"person_detected": True, "has_full_body": True, "pose_conf": 0.83},
-        "pose": {
-            "derived": {
-                "shoulder_tilt": 0.07,
-                "body_lean": 0.05,
-                "stance_width": 1.12,
-                "arms_open": 0.34,
-            }
-        },
-        "tags": {
-            "top": [
-                {"tag": "full-body portrait", "score": 0.82},
-                {"tag": "standing", "score": 0.78},
-                {"tag": "casual wear", "score": 0.65},
-            ]
-        },
-    }
-
-    print("=== 모델1 JSON 입력 테스트 ===\n")
-
-    # 변환 실행 (파라미터명 변경: face_preservation_strength → pose_strength)
-    result = transformer.generate(
-        input_image=input_image,
-        description=model1_output,
-        pose_strength=0.5,  # ⭐ 변경됨: 0.3(창의적) ~ 0.7(정확한 자세)
-    )
-
-    # 결과 저장
-    result["image"].save("output_medieval.png")
-    result["pose_skeleton"].save("output_pose.png")
-
-    print("\n✓ 테스트 완료!")
-    print(f"  - 파싱된 설명: {result['parsed_description']}")
-    print(f"  - 감지된 직업: {result['detected_occupation']}")  # ⭐ 새로 추가
-    print(f"  - 생성 시간: {result['metadata']['total_time']}초")
-    print(f"  - Pose 강도: {result['metadata']['pose_strength']}")
-    print("  - 결과 저장: output_medieval.png, output_pose.png")
+# 스탯 계산
+from backend.pipelines.stat_calculator import calculate_stats
 
 
-def test_different_occupations():
-    """다양한 직업 태그 테스트"""
+def test_full_pipeline(image_path: str, output_dir: str = "test_outputs"):
+    """
+    전체 파이프라인 테스트: Model 1 → Model 2 → Stats
 
-    transformer = MedievalCharacterTransformer()
-    input_image = Image.open(r"backend\IMG_6386.jpg")
+    Args:
+        image_path: 테스트할 이미지 경로
+        output_dir: 결과 저장 디렉토리
+    """
+    print("=" * 70)
+    print("  전체 파이프라인 테스트: Model 1 → Model 2 → Stats")
+    print("=" * 70)
 
-    # 직업별 테스트 케이스
-    test_cases = [
-        {
-            "name": "Knight (전사)",
-            "tags": [
-                {"tag": "strong warrior", "score": 0.9},
-                {"tag": "fighter", "score": 0.85},
-                {"tag": "confident", "score": 0.8},
-            ],
-        },
-        {
-            "name": "Mage (마법사)",
-            "tags": [
-                {"tag": "wise intelligent", "score": 0.9},
-                {"tag": "magic", "score": 0.85},
-                {"tag": "mysterious", "score": 0.8},
-            ],
-        },
-        {
-            "name": "Merchant (상인)",
-            "tags": [
-                {"tag": "merchant trader", "score": 0.9},
-                {"tag": "friendly", "score": 0.85},
-                {"tag": "wealthy", "score": 0.8},
-            ],
-        },
-        {
-            "name": "Peasant (농민)",
-            "tags": [
-                {"tag": "worker farmer", "score": 0.9},
-                {"tag": "hardworking", "score": 0.85},
-                {"tag": "simple", "score": 0.8},
-            ],
-        },
-    ]
+    # 출력 디렉토리 생성
+    output_path = Path(output_dir)
+    output_path.mkdir(exist_ok=True)
 
-    print("\n=== 직업별 생성 테스트 ===\n")
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    test_name = Path(image_path).stem
 
-    for case in test_cases:
-        print(f"\n[{case['name']}] 생성 중...")
+    try:
+        # ===== Step 1: 이미지 로드 =====
+        print(f"\n[Step 1/5] Loading image: {image_path}")
+        input_image = Image.open(image_path).convert("RGB")
+        print(f"✓ Image loaded: {input_image.size}")
 
+        # 원본 이미지 저장
+        original_output = output_path / f"{timestamp}_{test_name}_01_original.png"
+        input_image.save(original_output)
+        print(f"  Saved: {original_output.name}")
+
+        # ===== Step 2: Model 1 - 특징 추출 =====
+        print("\n[Step 2/5] Model 1: Extracting features...")
+        features = extract_features(input_image)
+
+        quality = features["quality"]
+        pose_derived = features["pose"]["derived"]
+        tags = features["tags"]["top"]
+
+        print("✓ Features extracted:")
+        print(f"  - Person detected: {quality['person_detected']}")
+        print(f"  - Full body: {quality['has_full_body']}")
+        print(f"  - Pose confidence: {quality['pose_conf']:.2f}")
+        print(f"  - Top 5 tags: {[t['tag'] for t in tags[:5]]}")
+
+        print("\n  Pose Metrics:")
+        print(f"    - Stance width: {pose_derived.get('stance_width', 0):.2f}")
+        print(f"    - Arms open: {pose_derived.get('arms_open', 0):.2f}")
+        print(f"    - Body lean: {pose_derived.get('body_lean', 0):.2f}")
+        print(f"    - Shoulder tilt: {pose_derived.get('shoulder_tilt', 0):.2f}")
+
+        # Features JSON 저장
+        features_output = output_path / f"{timestamp}_{test_name}_02_features.json"
+        with open(features_output, "w", encoding="utf-8") as f:
+            json.dump(features, f, indent=2, ensure_ascii=False)
+        print(f"\n  Saved: {features_output.name}")
+
+        # ===== Step 3: 스탯 계산 =====
+        print("\n[Step 3/5] Calculating stats...")
+        stats = calculate_stats(features)
+
+        print("✓ Stats calculated:")
+        for stat, value in stats.items():
+            bar = "█" * (value // 2)  # 막대 그래프
+            print(f"  {stat}: {value:2d} {bar}")
+
+        # Stats JSON 저장
+        stats_output = output_path / f"{timestamp}_{test_name}_03_stats.json"
+        with open(stats_output, "w", encoding="utf-8") as f:
+            json.dump(stats, f, indent=2, ensure_ascii=False)
+        print(f"\n  Saved: {stats_output.name}")
+
+        # ===== Step 4: Model 2 - 중세 이미지 생성 =====
+        print("\n[Step 4/5] Model 2: Generating medieval character...")
+
+        # MedievalCharacterTransformer 사용
+        transformer = MedievalCharacterTransformer()
+
+        # Model 1 출력을 description으로 전달
         model1_output = {
-            "quality": {
-                "person_detected": True,
-                "has_full_body": True,
-                "pose_conf": 0.83,
-            },
-            "pose": {
-                "derived": {
-                    "shoulder_tilt": 0.07,
-                    "body_lean": 0.05,
-                    "stance_width": 1.12,
-                    "arms_open": 0.34,
-                }
-            },
-            "tags": {"top": case["tags"]},
+            "quality": quality,
+            "pose": features["pose"],
+            "tags": features["tags"],
         }
+
+        print("  Generating... (this may take 30-60 seconds)")
 
         result = transformer.generate(
             input_image=input_image,
             description=model1_output,
+            pose_strength=0.5,  # 기본값
+        )
+
+        print(f"✓ Medieval image generated in {result['metadata']['total_time']:.1f}s")
+        print(f"  - Detected occupation: {result['detected_occupation']}")
+        print(f"  - Parsed description: {result['parsed_description']}")
+        print("\n  Prompt used:")
+        print(f"    {result['metadata']['prompt_used']}")
+
+        # 결과 이미지 저장
+        medieval_output = output_path / f"{timestamp}_{test_name}_04_medieval.png"
+        result["image"].save(medieval_output)
+        print(f"\n  Saved: {medieval_output.name}")
+
+        # Pose skeleton 저장
+        pose_output = output_path / f"{timestamp}_{test_name}_05_pose_skeleton.png"
+        result["pose_skeleton"].save(pose_output)
+        print(f"  Saved: {pose_output.name}")
+
+        # ===== Step 5: 결과 요약 저장 =====
+        print("\n[Step 5/5] Saving summary...")
+
+        summary = {
+            "test_name": test_name,
+            "image_path": image_path,
+            "timestamp": timestamp,
+            "model1_results": {
+                "person_detected": quality["person_detected"],
+                "full_body": quality["has_full_body"],
+                "pose_confidence": quality["pose_conf"],
+                "top_tags": [t["tag"] for t in tags[:5]],
+                "pose_metrics": pose_derived,
+            },
+            "stats": stats,
+            "model2_results": {
+                "detected_occupation": result["detected_occupation"],
+                "parsed_description": result["parsed_description"],
+                "generation_time": result["metadata"]["total_time"],
+                "prompt_used": result["metadata"]["prompt_used"],
+                "pose_strength": result["metadata"]["pose_strength"],
+            },
+            "output_files": {
+                "original": str(original_output.name),
+                "features_json": str(features_output.name),
+                "stats_json": str(stats_output.name),
+                "medieval_image": str(medieval_output.name),
+                "pose_skeleton": str(pose_output.name),
+            },
+        }
+
+        summary_output = output_path / f"{timestamp}_{test_name}_06_summary.json"
+        with open(summary_output, "w", encoding="utf-8") as f:
+            json.dump(summary, f, indent=2, ensure_ascii=False)
+        print(f"✓ Summary saved: {summary_output.name}")
+
+        # ===== 완료 =====
+        print("\n" + "=" * 70)
+        print("  ✓ 전체 파이프라인 완료!")
+        print("=" * 70)
+        print("\n저장된 파일들 (총 6개):")
+        print(f"  1. 원본 이미지: {original_output.name}")
+        print(f"  2. 특징 JSON: {features_output.name}")
+        print(f"  3. 스탯 JSON: {stats_output.name}")
+        print(f"  4. 중세 이미지: {medieval_output.name}")
+        print(f"  5. Pose skeleton: {pose_output.name}")
+        print(f"  6. 요약 JSON: {summary_output.name}")
+        print(f"\n출력 디렉토리: {output_path.absolute()}")
+
+        return {"success": True, "summary": summary}
+
+    except FileNotFoundError:
+        print(f"\n✗ Error: 이미지 파일을 찾을 수 없습니다: {image_path}")
+        print("  경로를 확인하고 다시 시도하세요.")
+        print(f"  현재 작업 디렉토리: {Path.cwd()}")
+        return {"success": False, "error": "File not found"}
+
+    except Exception as e:
+        print(f"\n✗ Error occurred: {type(e).__name__}: {str(e)}")
+        import traceback
+
+        traceback.print_exc()
+        return {"success": False, "error": str(e)}
+
+
+def test_model1_only(image_path: str):
+    """Model 1만 단독 테스트 (빠른 확인용)"""
+    print("\n" + "=" * 70)
+    print("  Model 1 단독 테스트 (특징 추출만)")
+    print("=" * 70)
+
+    try:
+        print(f"\n[1/2] Loading image: {image_path}")
+        input_image = Image.open(image_path).convert("RGB")
+        print(f"✓ Image loaded: {input_image.size}")
+
+        print("\n[2/2] Extracting features...")
+        features = extract_features(input_image)
+
+        print("\n✓ Features extracted successfully!")
+
+        # 주요 정보만 출력
+        quality = features["quality"]
+        tags = features["tags"]["top"]
+
+        print("\nQuality:")
+        print(f"  - Person detected: {quality['person_detected']}")
+        print(f"  - Full body: {quality['has_full_body']}")
+        print(f"  - Pose confidence: {quality['pose_conf']:.2f}")
+
+        print("\nTop Tags:")
+        for i, tag in enumerate(tags[:5], 1):
+            print(f"  {i}. {tag['tag']} (score: {tag['score']:.2f})")
+
+        print("\nPose Metrics:")
+        pose_derived = features["pose"]["derived"]
+        for key, value in pose_derived.items():
+            print(f"  - {key}: {value:.2f}")
+
+        return features
+
+    except Exception as e:
+        print(f"\n✗ Error: {e}")
+        import traceback
+
+        traceback.print_exc()
+        return None
+
+
+def test_model2_only(
+    image_path: str, output_path: str = "test_medieval_only.png", occupation: str = None
+):
+    """Model 2만 단독 테스트 (이미지 생성만)"""
+    print("\n" + "=" * 70)
+    print("  Model 2 단독 테스트 (중세 이미지 생성만)")
+    print("=" * 70)
+
+    try:
+        print(f"\n[1/3] Loading image: {image_path}")
+        input_image = Image.open(image_path).convert("RGB")
+        print(f"✓ Image loaded: {input_image.size}")
+
+        print("\n[2/3] Initializing Model 2...")
+        transformer = MedievalCharacterTransformer()
+
+        # 간단한 description (실제로는 Model 1 필요)
+        if occupation:
+            description = {
+                "quality": {
+                    "person_detected": True,
+                    "has_full_body": True,
+                    "pose_conf": 0.8,
+                },
+                "pose": {"derived": {}},
+                "tags": {"top": [{"tag": occupation, "score": 0.9}]},
+            }
+        else:
+            description = "medieval character"
+
+        print("\n[3/3] Generating... (this may take 30-60 seconds)")
+
+        result = transformer.generate(
+            input_image=input_image,
+            description=description,
             pose_strength=0.5,
         )
 
-        output_path = f"output_{case['name'].split()[0].lower()}.png"
         result["image"].save(output_path)
-        print(f"✓ 저장: {output_path}")
-        print(f"  감지된 직업: {result['detected_occupation']}")
-        print(f"  사용된 프롬프트: {result['metadata']['prompt_used'][:80]}...")
+        print(f"\n✓ Image saved to: {output_path}")
+        print(f"  Generation time: {result['metadata']['total_time']:.1f}s")
+        print(f"  Detected occupation: {result['detected_occupation']}")
+
+        return result
+
+    except Exception as e:
+        print(f"\n✗ Error: {e}")
+        import traceback
+
+        traceback.print_exc()
+        return None
 
 
-def test_pose_strength_comparison():
-    """Pose 강도별 비교 테스트"""
-
-    transformer = MedievalCharacterTransformer()
-    input_image = Image.open(r"backend\IMG_6386.jpg")
-
-    model1_output = {
-        "quality": {"person_detected": True, "has_full_body": True, "pose_conf": 0.83},
-        "pose": {
-            "derived": {
-                "shoulder_tilt": 0.07,
-                "body_lean": 0.05,
-                "stance_width": 1.12,
-                "arms_open": 0.34,
-            }
-        },
-        "tags": {
-            "top": [
-                {"tag": "strong warrior", "score": 0.9},
-                {"tag": "confident", "score": 0.85},
-            ]
-        },
-    }
-
-    print("\n=== Pose 강도별 테스트 ===\n")
-    print("(낮음: 창의적/자유로운 자세, 높음: 원본 자세 정확히 따라감)\n")
-
-    strengths = [0.3, 0.5, 0.7]
-
-    for strength in strengths:
-        print(f"\n[강도 {strength}] 생성 중...")
-        result = transformer.generate(
-            input_image=input_image,
-            description=model1_output,
-            pose_strength=strength,
-        )
-
-        output_path = f"output_pose_{int(strength * 100)}.png"
-        result["image"].save(output_path)
-        print(f"✓ 저장: {output_path}")
-
-
-def test_single_vs_multiple_people():
-    """단일 인물 필터링 테스트 (여러 사람이 있는 이미지)"""
-
-    transformer = MedievalCharacterTransformer()
-
-    # 여러 사람이 있는 이미지로 테스트 (있다면)
-    # input_image = Image.open("test_multiple_people.jpg")
-
-    # 또는 단일 인물 이미지로 필터링 로직 확인
-    input_image = Image.open(r"backend\IMG_6386.jpg")
-
-    model1_output = {
-        "quality": {"person_detected": True, "has_full_body": True, "pose_conf": 0.83},
-        "pose": {
-            "derived": {
-                "shoulder_tilt": 0.07,
-                "body_lean": 0.05,
-                "stance_width": 1.12,
-                "arms_open": 0.34,
-            }
-        },
-        "tags": {"top": [{"tag": "person standing", "score": 0.9}]},
-    }
-
-    print("\n=== 단일 인물 필터링 테스트 ===")
-    print("(OpenPose가 여러 사람을 감지하면 가장 큰 사람만 선택)\n")
-
-    result = transformer.generate(
-        input_image=input_image, description=model1_output, pose_strength=0.5
-    )
-
-    result["image"].save("output_single_person.png")
-    result["pose_skeleton"].save("output_pose_filtered.png")
-
-    print("\n✓ 테스트 완료!")
-    print("  - pose skeleton을 확인하여 1명만 남았는지 확인하세요")
-
-
-def test_text_description_only():
-    """텍스트 description만으로 테스트 (JSON 없이)"""
-
-    transformer = MedievalCharacterTransformer()
-    input_image = Image.open(r"backend\IMG_6386.jpg")
-
-    print("\n=== 텍스트 description 테스트 ===\n")
-
-    # 단순 텍스트로 전달
-    text_description = "powerful warrior, confident stance, strong build"
-
-    result = transformer.generate(
-        input_image=input_image, description=text_description, pose_strength=0.5
-    )
-
-    result["image"].save("output_text_only.png")
-
-    print("\n✓ 테스트 완료!")
-    print(f"  - 파싱된 설명: {result['parsed_description']}")
-    print(f"  - 감지된 직업: {result['detected_occupation']}")
-
-
+# ===== 메인 실행 =====
 if __name__ == "__main__":
-    # 1. 기본 테스트
-    print("\n" + "=" * 60)
-    print("1. 기본 변환 테스트")
-    print("=" * 60)
-    test_transformation()
+    import argparse
 
-    # 2. 직업별 테스트 (선택)
-    print("\n" + "=" * 60)
-    print("2. 직업별 생성 테스트")
-    print("=" * 60)
-    test_different_occupations()
+    parser = argparse.ArgumentParser(
+        description="Model 1 → Model 2 파이프라인 테스트",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+사용 예시:
+  # 기본 (전체 파이프라인)
+  python backend/tests/test_model.py test_images/photo1.jpg
+  
+  # Model 1만 (빠른 확인)
+  python backend/tests/test_model.py test_images/photo1.jpg --model1-only
+  
+  # Model 2만
+  python backend/tests/test_model.py test_images/photo1.jpg --model2-only
+  
+  # 출력 디렉토리 지정
+  python backend/tests/test_model.py test_images/photo1.jpg --output-dir my_results
+        """,
+    )
 
-    # 3. Pose 강도 비교 (선택)
-    print("\n" + "=" * 60)
-    print("3. Pose 강도별 비교")
-    print("=" * 60)
-    test_pose_strength_comparison()
+    parser.add_argument(
+        "image_path",
+        nargs="?",
+        default="test_images/sample.jpg",
+        help="테스트할 이미지 경로 (기본값: test_images/sample.jpg)",
+    )
+    parser.add_argument(
+        "--output-dir",
+        default="test_outputs",
+        help="결과 저장 디렉토리 (기본값: test_outputs)",
+    )
+    parser.add_argument(
+        "--model1-only", action="store_true", help="Model 1만 실행 (특징 추출만)"
+    )
+    parser.add_argument(
+        "--model2-only", action="store_true", help="Model 2만 실행 (이미지 생성만)"
+    )
+    parser.add_argument(
+        "--occupation", help="Model 2 전용: 직업 지정 (예: warrior, mage, merchant)"
+    )
 
-    # 4. 단일 인물 필터링 테스트 (선택)
-    # print("\n" + "=" * 60)
-    # print("4. 단일 인물 필터링 테스트")
-    # print("=" * 60)
-    # test_single_vs_multiple_people()
+    args = parser.parse_args()
 
-    # 5. 텍스트 전용 테스트 (선택)
-    # print("\n" + "=" * 60)
-    # print("5. 텍스트 description 테스트")
-    # print("=" * 60)
-    # test_text_description_only()
+    # 이미지 경로 확인
+    image_file = Path(args.image_path)
+    if not image_file.exists():
+        print(f"\n✗ Error: 이미지 파일이 존재하지 않습니다: {args.image_path}")
+        print(f"  현재 작업 디렉토리: {Path.cwd()}")
+        print("\n이미지 저장 위치:")
+        print("  프로젝트 루트에 'test_images' 폴더를 만들고")
+        print("  테스트할 이미지를 그 안에 넣으세요.")
+        print("\n예시:")
+        print("  Past-Life-Card-with-Stat/")
+        print("  ├── test_images/")
+        print("  │   ├── photo1.jpg")
+        print("  │   ├── photo2.jpg")
+        print("  │   └── photo3.jpg")
+        print("  └── backend/")
+        sys.exit(1)
 
-    print("\n" + "=" * 60)
-    print("모든 테스트 완료!")
-    print("=" * 60)
+    # Model 1만
+    if args.model1_only:
+        test_model1_only(args.image_path)
+
+    # Model 2만
+    elif args.model2_only:
+        test_model2_only(args.image_path, occupation=args.occupation)
+
+    # 전체 파이프라인 (기본)
+    else:
+        test_full_pipeline(args.image_path, args.output_dir)

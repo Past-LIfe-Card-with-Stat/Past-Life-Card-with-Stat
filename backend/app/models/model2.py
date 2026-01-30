@@ -185,10 +185,19 @@ class MedievalCharacterTransformer:
         # === JSON 파싱 ===
         if isinstance(description, dict):
             parsed_description, occupation = self.parse_model1_output(description)
-            print(f"✓ Parsed - Desc: {parsed_description}, Job: {occupation}")
+            quality = description.get("quality", {})
+            full_body = quality.get("has_full_body", True)
         else:
             parsed_description = description
             occupation = None
+            full_body = True
+
+        prompt = self.build_prompt(
+            description=parsed_description,
+            style=style,
+            occupation=occupation,
+            full_body=full_body,
+        )
 
         # Step 1: 포즈 추출 + 단일 인물 필터링
         print("Extracting pose...")
@@ -245,9 +254,13 @@ class MedievalCharacterTransformer:
         }
 
     def build_prompt(
-        self, description: str, style: str, occupation: Optional[str] = None
+        self,
+        description: str,
+        style: str,
+        occupation: Optional[str] = None,
+        full_body: bool = True,
     ) -> str:
-        """텍스트 특징을 프롬프트로 변환 (직업별 의상)"""
+        """텍스트 특징을 프롬프트로 변환 (직업별 의상 + 전신/반신)"""
         outfit_map = {
             "knight": "wearing heavy plate armor and helmet with sword",
             "mage": "wearing long wizard robes with staff and pointed hat",
@@ -257,15 +270,17 @@ class MedievalCharacterTransformer:
             "noble": "wearing elegant noble attire with jewelry and crown",
             "priest": "wearing religious robes with cross necklace",
             "blacksmith": "wearing leather apron and work clothes with hammer",
-            None: "wearing medieval fantasy clothing appropriate for their role",
+            # 직업 없을 때는 평민 쪽으로 강하게
+            None: "wearing simple medieval commoner clothing, no armor, no weapons",
         }
 
         outfit = outfit_map.get(occupation, outfit_map[None])
+        body_phrase = "full body shot" if full_body else "waist-up portrait"
 
         return (
             f"{style} RPG character portrait, {description}, "
             f"{outfit}, "
-            "full body shot, single person, solo character, "
+            f"{body_phrase}, single person, solo character, "
             "detailed character concept art, painterly style, "
             "dramatic cinematic lighting, high quality, masterpiece"
         )

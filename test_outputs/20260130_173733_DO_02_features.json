@@ -1,0 +1,64 @@
+{
+  "source": {
+    "image_size": {
+      "w": 736,
+      "h": 947
+    },
+    "python_version": "3.12.12"
+  },
+  "quality": {
+    "person_detected": true,
+    "has_full_body": false,
+    "pose_conf": 0.5435006022453308
+  },
+  "pose": {
+    "bbox_norm": [
+      0.1069923794787863,
+      0.12217311194479277,
+      0.9414980515189793,
+      0.9997111947886418
+    ],
+    "derived": {
+      "shoulder_tilt": 0.00227112318803215,
+      "body_lean": 0.06958125030722688,
+      "stance_width": 0.4089126211580685,
+      "arms_open": 0.27649643249792094
+    }
+  },
+  "tags": {
+    "top": [
+      {
+        "tag": "neutral expression",
+        "score": 0.20313243567943573
+      },
+      {
+        "tag": "blurry photo",
+        "score": 0.13270799815654755
+      },
+      {
+        "tag": "serious face",
+        "score": 0.11671435087919235
+      },
+      {
+        "tag": "well-lit",
+        "score": 0.10886570811271667
+      },
+      {
+        "tag": "hands clasped",
+        "score": 0.09493407607078552
+      },
+      {
+        "tag": "subject in the center",
+        "score": 0.04754902422428131
+      },
+      {
+        "tag": "sharp photo",
+        "score": 0.038512393832206726
+      },
+      {
+        "tag": "low light",
+        "score": 0.03669331222772598
+      }
+    ]
+  }
+}

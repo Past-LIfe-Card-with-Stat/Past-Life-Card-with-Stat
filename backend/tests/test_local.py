@@ -239,7 +239,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "image_path",
         nargs="?",
-        default="IMG_6386.jpg",
+        default="IMG_6386.jpg",  # input location
         help="테스트할 이미지 경로 (기본값: test_input.jpg)",
     )
     parser.add_argument(
