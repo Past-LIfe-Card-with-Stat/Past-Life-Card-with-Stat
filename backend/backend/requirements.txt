@@ -1,0 +1,29 @@
+# PyTorch (GPU) - 별도 설치 필요
+# torch==2.3.0+cu124
+# torchvision==0.18.0+cu124
+# torchaudio==2.3.0+cu124
+
+# Hugging Face
+transformers==4.40.0
+diffusers==0.27.0
+accelerate==0.28.0
+
+# ControlNet & 이미지 처리
+controlnet-aux==0.0.7
+opencv-python==4.9.0
+pillow==10.2.0
+timm==0.9.0
+einops==0.7.0
+mediapipe==0.10.9
+
+# FastAPI
+fastapi==0.110.0
+uvicorn[standard]==0.28.0
+python-multipart==0.0.9
+pydantic==2.6.0
+
+# 유틸리티
+numpy==1.26.0
+
+# 속도 최적화 (선택)
+# xformers (별도 설치)

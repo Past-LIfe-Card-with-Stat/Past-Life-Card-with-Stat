@@ -1,0 +1,198 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Medieval Fantasy Dark Theme */
+    --background: 20 14% 8%;
+    --foreground: 43 31% 90%;
+
+    --card: 25 20% 12%;
+    --card-foreground: 43 31% 90%;
+
+    --popover: 25 20% 12%;
+    --popover-foreground: 43 31% 90%;
+
+    --primary: 43 74% 49%;
+    --primary-foreground: 20 14% 8%;
+
+    --secondary: 25 30% 18%;
+    --secondary-foreground: 43 31% 85%;
+
+    --muted: 25 15% 20%;
+    --muted-foreground: 35 20% 55%;
+
+    --accent: 30 60% 35%;
+    --accent-foreground: 43 31% 95%;
+
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 30 25% 25%;
+    --input: 30 20% 20%;
+    --ring: 43 74% 49%;
+
+    --radius: 0.25rem;
+
+    /* Custom tokens */
+    --gold: 43 74% 49%;
+    --gold-dim: 43 50% 35%;
+    --parchment: 40 35% 85%;
+    --parchment-dark: 35 25% 75%;
+    --blood: 0 65% 40%;
+    --forest: 120 25% 25%;
+    --steel: 220 10% 50%;
+    --magic: 270 50% 50%;
+
+    /* Gradients */
+    --gradient-gold: linear-gradient(135deg, hsl(43 74% 55%) 0%, hsl(35 80% 40%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(25 20% 14%) 0%, hsl(20 15% 10%) 100%);
+    --gradient-hero: radial-gradient(ellipse at top, hsl(25 25% 15%) 0%, hsl(20 14% 8%) 70%);
+
+    /* Shadows */
+    --shadow-gold: 0 0 20px hsl(43 74% 49% / 0.3);
+    --shadow-card: 0 10px 40px hsl(0 0% 0% / 0.5);
+    --shadow-inset: inset 0 2px 4px hsl(0 0% 0% / 0.3);
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Crimson Text', serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Cinzel', serif;
+  }
+}
+
+@layer utilities {
+  .text-gold {
+    color: hsl(var(--gold));
+  }
+  
+  .bg-gold {
+    background-color: hsl(var(--gold));
+  }
+
+  .border-gold {
+    border-color: hsl(var(--gold));
+  }
+
+  .gradient-gold {
+    background: var(--gradient-gold);
+  }
+
+  .gradient-card {
+    background: var(--gradient-card);
+  }
+
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+
+  .shadow-gold {
+    box-shadow: var(--shadow-gold);
+  }
+
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+
+  .text-parchment {
+    color: hsl(var(--parchment));
+  }
+
+  .font-medieval {
+    font-family: 'Cinzel', serif;
+  }
+
+  .font-body {
+    font-family: 'Crimson Text', serif;
+  }
+
+  /* Stat bar colors */
+  .stat-strength {
+    background: linear-gradient(90deg, hsl(0 65% 40%) 0%, hsl(15 70% 50%) 100%);
+  }
+
+  .stat-agility {
+    background: linear-gradient(90deg, hsl(120 35% 30%) 0%, hsl(140 45% 45%) 100%);
+  }
+
+  .stat-intelligence {
+    background: linear-gradient(90deg, hsl(220 50% 45%) 0%, hsl(240 60% 60%) 100%);
+  }
+
+  .stat-charisma {
+    background: linear-gradient(90deg, hsl(300 40% 40%) 0%, hsl(320 50% 55%) 100%);
+  }
+
+  .stat-luck {
+    background: linear-gradient(90deg, hsl(43 60% 40%) 0%, hsl(50 74% 55%) 100%);
+  }
+
+  .stat-vitality {
+    background: linear-gradient(90deg, hsl(30 60% 35%) 0%, hsl(40 70% 50%) 100%);
+  }
+
+  /* Decorative border */
+  .border-ornate {
+    border: 2px solid hsl(var(--gold-dim));
+    box-shadow: 
+      inset 0 0 0 1px hsl(var(--gold) / 0.3),
+      0 0 15px hsl(var(--gold) / 0.2);
+  }
+
+  /* Animation */
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  @keyframes glow {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .animate-float {
+    animation: float 4s ease-in-out infinite;
+  }
+
+  .animate-glow {
+    animation: glow 2s ease-in-out infinite;
+  }
+
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--gold) / 0) 0%,
+      hsl(var(--gold) / 0.3) 50%,
+      hsl(var(--gold) / 0) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 3s linear infinite;
+  }
+}
