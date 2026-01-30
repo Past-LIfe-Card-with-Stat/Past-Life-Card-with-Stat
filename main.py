@@ -7,7 +7,8 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 from PIL import Image
 
-from backend.pipelines import extract_features_pipeline, medieval_pipeline
+from backend.app.models.model2 import MedievalCharacterTransformer
+from backend.pipelines import extract_features_pipeline
 
 load_dotenv()
 
@@ -21,6 +22,11 @@ UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 ALLOWED = {"image/jpeg", "image/png", "image/webp"}
+
+# ⭐ 모델2 싱글톤 (앱 시작 시 한 번만 로드)
+print("Loading Model 2 (MedievalCharacterTransformer)...")
+transformer = MedievalCharacterTransformer()
+print("✓ Model 2 loaded successfully")
 
 
 @app.get("/")
@@ -53,7 +59,8 @@ async def transform_image(file: UploadFile = File(...)):
             "status": "success",
             "features": {...},
             "medieval_image": "base64_string",
-            "output_path": "uploads/result_xxx.png"
+            "output_path": "uploads/result_xxx.png",
+            "metadata": {...}
         }
     """
     # 1. Content-Type 검증
@@ -76,24 +83,25 @@ async def transform_image(file: UploadFile = File(...)):
     # 3. 특징 추출 (모델1)
     try:
         features = extract_features_pipeline.main(image=image)
-        print(f"✓ Features extracted: {features}")
+        print("✓ Features extracted")
+        print(f"  - Person detected: {features['quality']['person_detected']}")
+        print(f"  - Full body: {features['quality']['has_full_body']}")
+        print(f"  - Pose conf: {features['quality']['pose_conf']:.2f}")
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Feature extraction failed: {str(e)}"
         )
 
-    # 4. 중세 캐릭터 변환 (모델2)
+    # 4. 중세 캐릭터 변환 (모델2) ⭐ 수정된 부분
     try:
-        pipeline = medieval_pipeline.MedievalPipeline()
+        # Model 2: Model 1의 features(JSON)를 그대로 description으로 전달
+        result = transformer.generate(
+            input_image=image,
+            description=features,  # ⭐ features를 그대로 전달
+            pose_strength=0.5,  # 로컬 테스트와 동일
+        )
 
-        # 프롬프트는 features에서 동적으로 생성하거나 고정
-        # 고정 프롬프트 사용 시:
-        prompt = "A person who lives in medieval period"
-
-        # 또는 features 기반 동적 프롬프트:
-        # prompt = generate_prompt_from_features(features)
-
-        result_image = pipeline.run(image, prompt)
+        result_image = result["image"]
 
         # 결과 저장
         output_filename = f"result_{Path(file.filename).stem}.png"
@@ -101,6 +109,8 @@ async def transform_image(file: UploadFile = File(...)):
         result_image.save(output_path)
 
         print(f"✓ Medieval image saved: {output_path}")
+        print(f"  - Detected occupation: {result['detected_occupation']}")
+        print(f"  - Generation time: {result['metadata']['total_time']:.1f}s")
 
     except Exception as e:
         print(f"✗ Pipeline error: {e}")
@@ -113,7 +123,7 @@ async def transform_image(file: UploadFile = File(...)):
     result_image.save(buffered, format="PNG")
     img_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
 
-    # 6. 응답 반환
+    # 6. 응답 반환 (Model2 메타데이터 포함)
     return JSONResponse(
         {
             "status": "success",
@@ -124,6 +134,13 @@ async def transform_image(file: UploadFile = File(...)):
                 "original_filename": file.filename,
                 "image_size": f"{image.size[0]}x{image.size[1]}",
                 "output_size": f"{result_image.size[0]}x{result_image.size[1]}",
+                "model2": {
+                    "detected_occupation": result["detected_occupation"],
+                    "parsed_description": result["parsed_description"],
+                    "prompt_used": result["metadata"]["prompt_used"],
+                    "generation_time": result["metadata"]["total_time"],
+                    "pose_strength": result["metadata"]["pose_strength"],
+                },
             },
         }
     )

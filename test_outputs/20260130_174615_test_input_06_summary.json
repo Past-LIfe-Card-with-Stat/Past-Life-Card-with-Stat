@@ -1,0 +1,45 @@
+{
+  "test_name": "test_input",
+  "image_path": "test_images/test_input.jpg",
+  "timestamp": "20260130_174615",
+  "model1_results": {
+    "person_detected": true,
+    "full_body": true,
+    "pose_confidence": 0.8967423439025879,
+    "top_tags": [
+      "full-body portrait",
+      "subject in the center",
+      "standing",
+      "sharp photo",
+      "neutral expression"
+    ],
+    "pose_metrics": {
+      "shoulder_tilt": 0.028248019285335824,
+      "body_lean": 0.12089428196021162,
+      "stance_width": 1.4245399099869056,
+      "arms_open": 1.3655846734337334
+    }
+  },
+  "stats": {
+    "STR": 17,
+    "AGI": 18,
+    "INT": 12,
+    "CHA": 24,
+    "LUK": 15,
+    "VIT": 22
+  },
+  "model2_results": {
+    "detected_occupation": null,
+    "parsed_description": "full-body portrait, subject in the center, standing, wide confident stance, open arms gesture",
+    "generation_time": 85.54,
+    "prompt_used": "medieval fantasy RPG character portrait, full-body portrait, subject in the center, standing, wide confident stance, open arms gesture, wearing simple medieval commoner clothing, no armor, no weapons, full body shot, single person, solo character, detailed character concept art, painterly style, dramatic cinematic lighting, high quality, masterpiece",
+    "pose_strength": 0.5
+  },
+  "output_files": {
+    "original": "20260130_174615_test_input_01_original.png",
+    "features_json": "20260130_174615_test_input_02_features.json",
+    "stats_json": "20260130_174615_test_input_03_stats.json",
+    "medieval_image": "20260130_174615_test_input_04_medieval.png",
+    "pose_skeleton": "20260130_174615_test_input_05_pose_skeleton.png"
+  }
+}
