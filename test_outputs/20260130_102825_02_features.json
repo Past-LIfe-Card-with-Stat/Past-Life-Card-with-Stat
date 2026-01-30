@@ -1,0 +1,64 @@
+{
+  "source": {
+    "image_size": {
+      "w": 768,
+      "h": 1024
+    },
+    "python_version": "3.12.12"
+  },
+  "quality": {
+    "person_detected": true,
+    "has_full_body": true,
+    "pose_conf": 0.9542804956436157
+  },
+  "pose": {
+    "bbox_norm": [
+      0.24946584304173788,
+      0.09887581318616867,
+      0.6298997402191162,
+      0.8989349603652954
+    ],
+    "derived": {
+      "shoulder_tilt": 0.002196955067155579,
+      "body_lean": 0.0030068773376668847,
+      "stance_width": 0.552233988097057,
+      "arms_open": 1.1099276269862253
+    }
+  },
+  "tags": {
+    "top": [
+      {
+        "tag": "full-body portrait",
+        "score": 0.41237467527389526
+      },
+      {
+        "tag": "standing",
+        "score": 0.22434495389461517
+      },
+      {
+        "tag": "hands on hips",
+        "score": 0.11875574290752411
+      },
+      {
+        "tag": "sitting",
+        "score": 0.050404760986566544
+      },
+      {
+        "tag": "neutral expression",
+        "score": 0.034593068063259125
+      },
+      {
+        "tag": "relaxed pose",
+        "score": 0.02700783684849739
+      },
+      {
+        "tag": "half-body portrait",
+        "score": 0.01898789405822754
+      },
+      {
+        "tag": "subject in the center",
+        "score": 0.018680505454540253
+      }
+    ]
+  }
+}

@@ -273,7 +273,9 @@ class MedievalCharacterTransformer:
     def build_negative_prompt(self) -> str:
         """네거티브 프롬프트"""
         return (
-            "multiple people, two people, crowd, group, "  # ⭐ 다중 인물 방지
+            "multiple people, two people, crowd, group, "
+            "extra limbs, extra legs, extra arms, third leg, multiple legs, "
+            "deformed limbs, mutated limbs, fused limbs, "
             "modern clothing, photograph, realistic photo, "
             "blurry, low quality, ugly, deformed, "
             "watermark, text, signature, logo"
