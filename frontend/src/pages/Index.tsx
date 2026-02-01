@@ -18,9 +18,14 @@ import { jobClasses } from "@/lib/jobClasses";
 // 검증 에러 메시지
 const validationMessages: Record<ValidationErrorType, string> = {
   no_human: "사람이 감지되지 않았습니다. 몬스터는 아직 지원하지 않아요!",
+  no_person: "이미지에서 사람을 감지할 수 없습니다. 전신 사진을 사용해주세요.",
   not_fullbody: "전신 사진이 필요해요. 발끝까지 나와야 스탯을 잴 수 있습니다!",
-  animal_detected:
-    "앗, 귀여운 동물이군요! 하지만 지금은 사람만 변환 가능합니다.",
+  animal_detected: "앗, 귀여운 동물이군요! 하지만 지금은 사람만 변환 가능합니다.",
+  image_too_small: "이미지가 너무 작습니다. 최소 256x256 픽셀 이상의 이미지를 사용해주세요.",
+  image_too_large: "이미지가 너무 큽니다. 최대 4096x4096 픽셀 이하의 이미지를 사용해주세요.",
+  image_corrupted: "이미지 파일이 손상되었거나 지원하지 않는 형식입니다.",
+  no_face_warning: "얼굴을 명확하게 감지할 수 없습니다. Face Swap 기능이 제한될 수 있습니다.",
+  unsupported_format: "JPG, PNG 형식의 이미지 파일만 지원합니다.",
 };
 
 // Backend API 응답 타입
@@ -144,7 +149,8 @@ const uploadImage = async (file: File): Promise<ApiResponse> => {
     const error = await response
       .json()
       .catch(() => ({ message: "알 수 없는 오류" }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    const message = error.message || "알 수 없는 오류";
+    throw new Error(`HTTP_${response.status}:${message}`);
   }
 
   return response.json();
@@ -192,26 +198,48 @@ const Index = () => {
       const errorMessage =
         error instanceof Error ? error.message : "알 수 없는 오류";
 
-      if (errorMessage.includes("pose") || errorMessage.includes("person")) {
-        setValidationError({
-          type: "no_human",
-          message: validationMessages.no_human,
-        });
-      } else if (
-        errorMessage.includes("fullbody") ||
-        errorMessage.includes("body")
-      ) {
-        setValidationError({
-          type: "not_fullbody",
-          message: validationMessages.not_fullbody,
-        });
+      // 백엔드 검증 에러 파싱
+      let errorType: ValidationErrorType = "no_human";
+      let customMessage = errorMessage;
+      const warnings: string[] = [];
+
+      // HTTP 415: Unsupported Media Type
+      if (errorMessage.includes("HTTP_415") || errorMessage.includes("Unsupported Media Type")) {
+        errorType = "unsupported_format";
+        customMessage = validationMessages.unsupported_format;
+      } else if (errorMessage.includes("형식") || errorMessage.includes("format") || errorMessage.includes("extension") || errorMessage.includes("확장자")) {
+        errorType = "unsupported_format";
+        customMessage = validationMessages.unsupported_format;
+      } else if (errorMessage.includes("이미지가 너무 작습니다") || errorMessage.includes("too small")) {
+        errorType = "image_too_small";
+        customMessage = validationMessages.image_too_small;
+      } else if (errorMessage.includes("이미지가 너무 큽니다") || errorMessage.includes("too large")) {
+        errorType = "image_too_large";
+        customMessage = validationMessages.image_too_large;
+      } else if (errorMessage.includes("손상") || errorMessage.includes("corrupted")) {
+        errorType = "image_corrupted";
+        customMessage = validationMessages.image_corrupted;
+      } else if (errorMessage.includes("사람을 감지할 수 없습니다") || errorMessage.includes("no person")) {
+        errorType = "no_person";
+        customMessage = validationMessages.no_person;
+      } else if (errorMessage.includes("얼굴") || errorMessage.includes("face")) {
+        errorType = "no_face_warning";
+        customMessage = validationMessages.no_face_warning;
+      } else if (errorMessage.includes("pose") || errorMessage.includes("person")) {
+        errorType = "no_human";
+        customMessage = validationMessages.no_human;
+      } else if (errorMessage.includes("fullbody") || errorMessage.includes("body")) {
+        errorType = "not_fullbody";
+        customMessage = validationMessages.not_fullbody;
       } else {
-        // 일반 에러는 alert로 표시
-        setValidationError({
-          type: "no_human",
-          message: `오류가 발생했습니다: ${errorMessage}`,
-        });
+        customMessage = `오류가 발생했습니다: ${errorMessage}`;
       }
+
+      setValidationError({
+        type: errorType,
+        message: customMessage,
+        warnings: warnings.length > 0 ? warnings : undefined,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -242,7 +270,13 @@ const Index = () => {
           <Button
             variant="dark"
             size="sm"
-            onClick={() => setShowGallery(!showGallery)}
+            onClick={() => {
+              setShowGallery(!showGallery);
+              if (showGallery) {
+                setCurrentCharacter(null);
+                setSelectedFile(null);
+              }
+            }}
             className="gap-2"
           >
             {showGallery ? (
