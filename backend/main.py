@@ -8,7 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from PIL import Image
 
-from backend.pipelines import medieval_pipeline
+from api.pipelines import medieval_pipeline
+from api.utils.image_validator import get_validator
 
 load_dotenv()
 
@@ -30,6 +31,34 @@ UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 ALLOWED = {"image/jpeg", "image/png", "image/webp"}
+
+# 전역 파이프라인 캐싱
+_pipeline = None
+
+def get_pipeline():
+    """파이프라인 싱글톤 (서버 시작 시 한 번만 로드)"""
+    global _pipeline
+    if _pipeline is None:
+        _pipeline = medieval_pipeline.MedievalPipeline()
+    return _pipeline
+
+@app.on_event("startup")
+async def startup_event():
+    """서버 시작 시 파이프라인 초기화"""
+    print("\n" + "=" * 60)
+    print("  Initializing Medieval Pipeline...")
+    print("=" * 60)
+    get_pipeline()
+    get_validator()  # 검증기도 초기화
+    print("  ✓ Pipeline ready!\n")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """서버 종료 시 리소스 정리"""
+    global _pipeline
+    if _pipeline is not None:
+        print("\n  Shutting down pipeline...")
+        _pipeline = None
 
 
 @app.get("/")
@@ -82,9 +111,27 @@ async def transform_image(file: UploadFile = File(...)):
 
     print(f"\n[Request] File: {file.filename}, Size: {image.size}")
 
+    # 2.5. 이미지 검증 (사람 감지, 얼굴 감지, 크기 체크)
+    validator = get_validator()
+    validation_result = validator.validate(image)
+
+    if not validation_result["valid"]:
+        error_msg = " | ".join(validation_result["errors"])
+        raise HTTPException(
+            status_code=400,
+            detail=f"이미지 검증 실패: {error_msg}"
+        )
+
+    # 경고가 있으면 로그 출력
+    if validation_result["warnings"]:
+        for warning in validation_result["warnings"]:
+            print(f"  ⚠ {warning}")
+
+    print(f"  ✓ Validation passed: {validation_result['metadata']}")
+
     # 3. 파이프라인 실행 (특징 추출 + 이미지 생성 + 캐릭터 카드)
     try:
-        pipeline = medieval_pipeline.MedievalPipeline()
+        pipeline = get_pipeline()  # 캐시된 파이프라인 사용
         result = pipeline.run(image)
 
         result_image = result["generated_image"]

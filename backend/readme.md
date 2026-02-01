@@ -197,6 +197,87 @@ Health check 및 API 정보
 | 직업/역할 추론 | `Qwen/Qwen2.5-7B-Instruct`             |
 | Flavor Text    | `meta-llama/Llama-3.1-8B-Instruct`     |
 
+## 알려진 문제 및 개선 작업 (2026-02-02)
+
+### 1. 이상한 합성 결과 (얼굴 어색함)
+
+**원인:**
+- 얼굴 합성이 단순 리사이즈+붙여넣기만 함 (정렬/색상 보정 없음)
+- 얼굴 크롭이 margin 1.5로 크게 잘아 배경까지 섞임
+- 생성 이미지의 얼굴 좌표가 부정확하면 강제 왜곡됨
+
+**해결 방법 (우선순위):**
+- [x] 1단계: 파이프라인 전역 캐싱 (main.py 수정) - 서버 시작 시 한 번만 로드
+- [x] 2단계: OpenPose 옵션 축소 (model2.py 수정) - hand_and_face=False로 변경
+- [x] 3단계: 추론 해상도/step 감소 (model2.py 수정) - 768→512, 6→4 스텝
+- [x] 4단계: 얼굴 정렬 및 색상 보정 추가 (image_blender.py 수정) - 색상 톤 맞춤
+- [x] 5단계: 얼굴 크롭 margin 축소 (face_cropper.py 수정) - 1.5→1.2
+- [x] 6단계: 얼굴 감지 실패 시 Fallback (medieval_pipeline.py) - 중앙 배치
+
+### 2. 매우 느린 처리 속도
+
+**원인:**
+- 요청마다 파이프라인 새로 생성 → SDXL/ControlNet/OpenPose 매번 로드
+- 768x768 해상도 + 6 steps (불필요하게 높음)
+- OpenPose hand_and_face=True로 처리 비용 증가
+- CLIP, YOLO도 모두 풀 실행
+
+**해결 방법 (우선순위):**
+- [x] 1단계: 파이프라인 전역 캐싱 (main.py) - ✓ 완료
+- [x] 2단계: OpenPose hand_and_face=False 변경 (model2.py) - ✓ 완료
+- [x] 3단계: 768 → 512 해상도, 6 → 4 steps 감소 (model2.py) - ✓ 완료
+
+### 3. 스탯 계산 문제
+
+**원인:**
+- "full-body portrait" 태그가 흔하게 나와서 CHA가 항상 높음 → LEADERSHIP만 나옴
+- 기본값(10)이 너무 낮아서 전사도 STR/VIT이 15~20 수준
+
+**해결 방법:**
+- [x] CHA 계산 가중치 낮춤 (20 → 5)
+- [x] Leadership 허용 기준 상향 (CHA >= 18 → 25)
+- [x] 스탯 기본값 상향 (10 → 15)
+- [x] Pose/장비/실루엣 가중치 20% 상향
+
+### 4. 이미지 검증 누락
+
+**원인:**
+- Content-type만 체크하고 실제 이미지 유효성은 검증하지 않음
+- 사람 없는 이미지, 손상된 이미지, 너무 작거나 큰 이미지 처리 불가
+
+**해결 방법 (api/utils/image_validator.py):**
+- [x] 이미지 크기 검증 (최소 256x256, 최대 4096x4096)
+- [x] 사람 감지 여부 체크 (YOLO Pose)
+- [x] 얼굴 감지 여부 체크 (RetinaFace) - 경고로 처리
+- [x] 이미지 손상 체크 (PIL verify)
+
+**예외 처리 시점:**
+- **Step 1 (main.py)**: Content-Type 검증
+- **Step 2 (main.py)**: 이미지 파일 로드 검증
+- **Step 2.5 (main.py)**: 이미지 검증 (크기, 사람 감지, 얼굴 감지)
+- **Step 3 (medieval_pipeline.py)**: 원본 얼굴 감지 실패 → 경고
+- **Step 4 (medieval_pipeline.py)**: 생성 이미지 얼굴 감지 실패 → Fallback (중앙 배치)
+
+## 진행 상황
+
+### 완료된 개선사항
+- ✓ PyTorch/torchvision CUDA 빌드 재설정
+- ✓ xformers 제거 (빌드 실패로 인해 옵션)
+- ✓ 파이프라인 전역 캐싱 (요청 시마다 모델 로드 방지)
+- ✓ OpenPose 최적화 (hand_and_face=False)
+- ✓ 생성 해상도/스텝 감소 (768→512, 6→4)
+- ✓ 얼굴 색상 보정 추가 (타겟 톤에 맞춤)
+- ✓ 얼굴 크롭 margin 축소 (1.5→1.2)
+- ✓ 얼굴 감지 실패 시 Fallback 추가
+- ✓ CHA 계산 로직 개선 (LEADERSHIP 편향 해결)
+- ✓ 스탯 기본값/가중치 상향 (전사 STR/VIT 개선)
+- ✓ 이미지 검증 로직 추가 (크기, 사람/얼굴 감지, 손상 체크)
+
+### 다음 개선 예정사항
+- [ ] 얼굴 랜드마크 기반 정렬 (회전/변형 보정)
+- [ ] CLIP 모델 케싱 (extract_features_pipeline에서)
+- [ ] Batch 처리 (여러 요청 동시 처리)
+
 ## 트러블슈팅
 
 ### CUDA Out of Memory
