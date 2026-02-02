@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { ArrowRight, RotateCcw, History, Plus } from "lucide-react";
+import { useState, useRef } from "react";
+import { ArrowRight, RotateCcw, History, Plus, Download } from "lucide-react";
+import html2canvas from "html2canvas";
 import HeroSection from "@/components/HeroSection";
 import ImageUploader from "@/components/ImageUploader";
 import CharacterCard from "@/components/CharacterCard";
@@ -157,6 +158,7 @@ const uploadImage = async (file: File): Promise<ApiResponse> => {
 };
 
 const Index = () => {
+  const cardRef = useRef<HTMLDivElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [currentCharacter, setCurrentCharacter] =
@@ -260,6 +262,28 @@ const Index = () => {
     setShowGallery(false);
   };
 
+  const handleDownloadCard = async () => {
+    if (!cardRef.current) return;
+
+    try {
+      const canvas = await html2canvas(cardRef.current, {
+        backgroundColor: null,
+        scale: 2,
+        logging: false,
+      });
+
+      const link = document.createElement("a");
+      link.href = canvas.toDataURL("image/png");
+      link.download = `${currentCharacter?.name || "character"}_card.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("카드 저장 실패:", error);
+      alert("카드 저장에 실패했습니다.");
+    }
+  };
+
   return (
     <div className="min-h-screen gradient-hero">
       <HeroSection />
@@ -323,14 +347,15 @@ const Index = () => {
           </div>
         ) : (
           <div className="space-y-8 animate-in fade-in duration-700">
-            <CharacterCard {...currentCharacter} />
+            <CharacterCard {...currentCharacter} ref={cardRef} />
 
             <div className="flex justify-center gap-4">
               <Button variant="dark" size="lg" onClick={handleReset}>
                 <RotateCcw className="w-4 h-4 mr-2" />
                 다시 하기
               </Button>
-              <Button variant="gold" size="lg">
+              <Button variant="gold" size="lg" onClick={handleDownloadCard}>
+                <Download className="w-4 h-4 mr-2" />
                 카드 저장하기
               </Button>
             </div>

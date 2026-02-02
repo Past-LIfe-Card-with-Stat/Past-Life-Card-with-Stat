@@ -1,4 +1,5 @@
 import { Sword, Wind, Brain, Heart, Sparkles, Shield } from "lucide-react";
+import { forwardRef } from "react";
 import StatBar from "./StatBar";
 import { getJobClass, JobClass } from "@/lib/jobClasses";
 
@@ -21,20 +22,23 @@ interface CharacterCardProps {
   description: string;
 }
 
-const CharacterCard = ({
-  name,
-  jobClassId,
-  jobClass,
-  level,
-  imageUrl,
-  stats,
-  description,
-}: CharacterCardProps) => {
+const CharacterCard = forwardRef<HTMLDivElement, CharacterCardProps>((
+  {
+    name,
+    jobClassId,
+    jobClass,
+    level,
+    imageUrl,
+    stats,
+    description,
+  },
+  ref,
+) => {
   const jobClassData = getJobClass(jobClassId);
   const JobIcon = jobClassData.icon;
 
   return (
-    <div className="relative w-full max-w-md mx-auto">
+    <div className="relative w-full max-w-md mx-auto" ref={ref}>
       {/* Decorative corners */}
       <div className="absolute -top-2 -left-2 w-8 h-8 border-t-2 border-l-2 border-gold" />
       <div className="absolute -top-2 -right-2 w-8 h-8 border-t-2 border-r-2 border-gold" />
@@ -118,6 +122,8 @@ const CharacterCard = ({
       </div>
     </div>
   );
-};
+});
+
+CharacterCard.displayName = "CharacterCard";
 
 export default CharacterCard;
